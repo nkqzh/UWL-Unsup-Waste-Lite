@@ -1,0 +1,62 @@
+unsupwaste-lite/
+├─ README.md # 一键上手 & 研究动机 & 跑通指南
+├─ environment.yml # Conda 环境（CUDA/CPU 通用，含可选依赖）
+├─ pyproject.toml # 项目元数据与依赖（pip 可安装）
+├─ setup.cfg # 工具链配置（flake8/isort/pytest 等）
+├─ LICENSE
+├─ configs/
+│ ├─ classes.yaml # 垃圾类别集合（可编辑）
+│ ├─ dataset_taco.yaml # Ultralytics 数据集描述（TACO）
+│ ├─ dataset_trashnet.yaml # Ultralytics 数据集描述（TrashNet 兼容格式）
+│ ├─ dataset_mju.yaml # Ultralytics 数据集描述（MJU-Waste 转换后）
+│ ├─ train_yolo11.yaml # YOLO11 训练超参模板
+│ ├─ train_rtdetrv2.yaml # RT-DETRv2 训练超参模板
+│ └─ pseudo.yaml # 伪标生成配置（文本提示、阈值、NMS 等）
+├─ data/
+│ ├─ raw/ # 原始下载数据（TACO/TrashNet/MJU-Waste）
+│ ├─ yolo/ # 转换为 YOLO 数据格式的目录
+│ └─ cache/ # 处理缓存
+├─ docs/
+│ ├─ REFERENCES.md # 论文/代码来源备份链接（便于引用）
+│ ├─ METHOD.md # 算法框架说明（含公式）
+│ ├─ EXPERIMENTS.md # 实验计划与记录模板（对比/消融/超参）
+│ ├─ SYSTEM.md # 端侧部署与系统集成说明（电控/相机/云台）
+│ └─ TEMPLATE_PAPER_OUTLINE.md # 论文大纲：针对学校模板的落地结构
+├─ scripts/
+│ ├─ download_taco.sh # 官方脚本封装（含 Kaggle 备选）
+│ ├─ download_trashnet.sh # TrashNet 获取（GitHub/Kaggle 两路）
+│ ├─ download_mju.sh # MJU-Waste 获取（官方/镜像）
+│ ├─ convert_to_yolo.py # 将各数据集转换到 YOLO 标注
+│ ├─ make_splits.py # 随机/可复现划分 train/val/test
+│ ├─ gen_pseudolabels.py # GroundingDINO(+SAM2) 文本驱动伪标
+│ ├─ train_yolo.py # 训练 YOLO11（Ultralytics API/CLI）
+│ ├─ train_rtdetrv2.py # 训练 RT-DETRv2（HF/官方脚本封装）
+│ ├─ eval_yolo.py # 评测与混淆矩阵/PR 曲线导出
+│ ├─ export_onnx.py # 导出 ONNX（动态输入/INT8 可选）
+│ └─ infer_onnx.py # ONNXRuntime 推理（PC 与 RPi5）
+└─ src/
+├─ unsupwaste/
+│ ├─ __init__.py
+│ ├─ data/
+│ │ ├─ taco.py # TACO 数据读取与可视化
+│ │ ├─ trashnet.py # TrashNet 数据读取与可视化
+│ │ ├─ mju.py # MJU-Waste 数据读取与可视化
+│ │ └─ transforms.py # 增广/归一化/色彩抖动
+│ ├─ pseudo/
+│ │ ├─ gdino_runner.py # GroundingDINO 文本检测接口
+│ │ ├─ sam2_runner.py # SAM2 掩码细化接口
+│ │ └─ yolo_writer.py # 将框/掩码落到 YOLO txt/seg 格式
+│ ├─ training/
+│ │ ├─ yolo_api.py # Ultralytics 训练/验证/导出薄封装
+│ │ └─ rtdetr_api.py # RT-DETRv2 训练/验证薄封装
+│ ├─ deploy/
+│ │ ├─ onnx_export.py # 通用导出工具
+│ │ └─ ort_infer.py # ORT Session 管理/计时/后处理
+│ └─ utils/
+│ ├─ viz.py # 可视化（标注/伪标/预测）
+│ ├─ coco_tools.py # COCO<->YOLO 转换/评测工具
+│ ├─ splits.py # 划分工具（固定随机种子）
+│ └─ io.py # 路径/日志/配置加载
+└─ tests/
+├─ test_conversions.py # 单元测试示例
+└─ test_infer_onnx.py # 推理单测样例
