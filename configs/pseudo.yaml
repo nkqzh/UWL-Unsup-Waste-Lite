@@ -1,0 +1,16 @@
+text_prompts:
+  - "bottle"
+  - "aluminum can"
+  - "paper cup"
+  - "plastic bag"
+  - "cardboard"
+  - "battery"
+  - "metal scrap"
+  - "glass bottle"
+  - "food waste"
+  - "trash"
+box_threshold: 0.30 # GroundingDINO 文本-框阈值
+text_threshold: 0.25
+nms_iou: 0.6
+use_sam2: true # 使用 SAM2 细化掩码（转 YOLO-seg 可选）
+max_detections: 300
