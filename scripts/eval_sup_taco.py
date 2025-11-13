@@ -1,69 +1,53 @@
 # scripts/eval_sup_taco.py
 """
-对训练好的 YOLO 模型在 TACO YOLO 数据集上做评测。
+Evaluate supervised YOLO11n on TACO YOLO dataset.
+用来在 val / test 集上重复评测，方便论文记录指标。
 """
 
-import argparse
 from pathlib import Path
-
 from ultralytics import YOLO
 
+
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--weights",
-        type=str,
-        default="runs/uwl_taco_sup/yolo11n/weights/best.pt",
-        help="训练好的权重路径",
-    )
-    parser.add_argument(
-        "--data",
-        type=str,
-        default="configs/taco_yolo.yaml",
-        help="YOLO 数据配置文件",
-    )
-    parser.add_argument(
-        "--split",
-        type=str,
-        default="val",
-        choices=["train", "val", "test"],
-        help="评测使用哪个 split（train/val/test）",
-    )
-    parser.add_argument(
-        "--device",
-        type=str,
-        default="0",
-        help='设备，如 "0" 或 "cpu"',
-    )
-    args = parser.parse_args()
+    # 1) 权重路径（可以改成命令行参数，这里先写死一个示例）
+    ckpt = Path("runs/uwl_taco_sup/yolo11n2/weights/best.pt")
 
-    weights_path = Path(args.weights)
-    if not weights_path.exists():
-        raise FileNotFoundError(f"找不到权重文件: {weights_path}")
+    if not ckpt.is_file():
+        raise FileNotFoundError(f"找不到权重文件: {ckpt.resolve()}")
 
-    model = YOLO(str(weights_path))
+    # 2) 加载模型
+    model = YOLO(str(ckpt))
 
-    print(f"[eval_sup_taco] 在 {args.split} 集上评测：")
-
-    # Ultralytics 使用 data 配置里的 test/val，不过我们可以通过 overrides 改写 split
-    metrics = model.val(
-        data=args.data,
-        split=args.split,
-        device=args.device,
+    # 3) 在 val 集上评测
+    metrics_val = model.val(
+        data="configs/taco_yolo.yaml",
+        split="val",        # 也可以改成 "test"
         imgsz=640,
         batch=16,
+        device=0,
+        plots=True,         # 生成 PR 曲线等
+        save_json=False,
     )
 
-    print()
-    print("✅ 评测完成。主要指标：")
-    # metrics 是 BoxResults 对象，里面有很多字段，这里打印常用几个
-    try:
-        print(f"  mAP50:      {metrics.box.map50:.4f}")
-        print(f"  mAP50-95:   {metrics.box.map:.4f}")
-        print(f"  precision:  {metrics.box.mp:.4f}")
-        print(f"  recall:     {metrics.box.mr:.4f}")
-    except Exception:
-        print("  原始 metrics 对象：", metrics)
+    print("\n🧪 Validation metrics:")
+    print(f"  mAP50      = {metrics_val.box.map50:.4f}")
+    print(f"  mAP50-95   = {metrics_val.box.map:.4f}")
+    print(f"  save_dir   = {metrics_val.save_dir}")
+
+    # 4) 若想在 test 集上再评测一次，可以取消下面注释：
+    # metrics_test = model.val(
+    #     data="configs/taco_yolo.yaml",
+    #     split="test",
+    #     imgsz=640,
+    #     batch=16,
+    #     device=0,
+    #     plots=True,
+    # )
+    # print("\n🧪 Test metrics:")
+    # print(f"  mAP50      = {metrics_test.box.map50:.4f}")
+    # print(f"  mAP50-95   = {metrics_test.box.map:.4f}")
+    # print(f"  save_dir   = {metrics_test.save_dir}")
+
 
 if __name__ == "__main__":
     main()

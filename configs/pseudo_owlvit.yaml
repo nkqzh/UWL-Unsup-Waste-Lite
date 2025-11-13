@@ -1,0 +1,19 @@
+# configs/pseudo_owlvit.yaml
+# 用于 GDRunner.from_cfg 的伪标配置（目前只走 OWL-ViT 路径）
+
+text_prompts:
+  - "trash"
+  - "garbage"
+  - "plastic bottle"
+  - "metal can"
+  - "paper"
+  - "cardboard"
+  - "glass bottle"
+  - "plastic bag"
+  - "food waste"
+  - "other waste"
+
+# 盒子置信度阈值（可在实验里做消融）
+box_threshold: 0.4
+# 文本匹配阈值（目前 OWL-ViT 路径用不到这个，可留着）
+text_threshold: 0.25
