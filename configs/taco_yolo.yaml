@@ -1,0 +1,13 @@
+# configs/taco_yolo.yaml
+# YOLO data config for TACO -> YOLO conversion
+
+# 数据集根目录（脚本会生成）
+path: data/taco_yolo
+
+train: images/train
+val: images/val
+test: images/test
+
+# 单类别：所有垃圾统一为 waste
+names:
+  0: waste
