@@ -38,7 +38,7 @@ def main():
     )
     parser.add_argument(
         "--clusters",
-        default="artifacts/taco_unsup/clip_clusters/cluster_labels_k6.json",
+        default="artifacts/taco_unsup/clip_clusters/cluster_labels_k10.json",
     )
     parser.add_argument(
         "--out-dir",

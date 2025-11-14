@@ -22,13 +22,13 @@ def main():
     parser.add_argument(
         "--images-dir",
         type=str,
-        default="data/taco_yolo/images/train",
+        default="datasets/data/taco_yolo/images/train",
         help="要生成伪标签的图像目录",
     )
     parser.add_argument(
         "--weights",
         type=str,
-        default="runs/uwl_taco_sup/yolo11n2/weights/best.pt",
+        default="runs/uwl_taco_sup/yolo11s_full/weights/best.pt",
         help="Teacher 模型权重路径（你的监督 YOLO11n）",
     )
     parser.add_argument(

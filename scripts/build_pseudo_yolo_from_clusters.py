@@ -36,7 +36,7 @@ def main():
     parser.add_argument(
         "--clusters",
         type=str,
-        default="artifacts/taco_unsup/clip_clusters/cluster_labels_k6.json",
+        default="artifacts/taco_unsup/clip_clusters/cluster_labels_k10.json",
         help="Stage B 生成的聚类结果文件",
     )
     parser.add_argument(

@@ -1,0 +1,21 @@
+# configs/taco_unsup_k10.yaml
+
+path: data/taco_unsup_yolo
+
+train: images/train
+val: images/train   # 暂时用 train 作验证集，后续可以再拆
+
+names:
+  0: cluster_0
+  1: cluster_1
+  2: cluster_2
+  3: cluster_3
+  4: cluster_4
+  5: cluster_5
+  6: cluster_6
+  7: cluster_7
+  8: cluster_8
+  9: cluster_9
+
+
+

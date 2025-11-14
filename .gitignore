@@ -1,4 +1,6 @@
 # 忽略数据集文件夹
 datasets/
+# 忽略生成文件夹
+artifacts/
 # 忽略运行结果文件夹
 runs/
