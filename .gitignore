@@ -1,4 +1,4 @@
 # 忽略数据集文件夹
-data/
+datasets/
 # 忽略运行结果文件夹
 runs/

@@ -1,180 +1,144 @@
 # scripts/convert_taco_to_yolo.py
 """
-将 TACO 的 COCO 标注转换为 YOLO 检测格式（单类：waste）。
-默认输入：
-    external/TACO/data/annotations.json
-    external/TACO/data/batch_x/*.jpg （官方下载脚本的结构）
-默认输出：
-    data/taco_yolo/images/{train,val,test}
-    data/taco_yolo/labels/{train,val,test}
+将完整 TACO 数据集 (batch_1 ~ batch_15) 转换为 YOLO 检测格式。
+
+目录结构：
+    external/TACO/data/
+        batch_1/
+        batch_2/
+        ...
+        batch_15/
+        annotations.json
+
+annotations.json 里的 file_name 一般形如:
+    "file_name": "batch_1/000001.jpg"
+
+输出：
+    datasets/data/taco_yolo/
+        images/train/batch_x/*.jpg
+        images/val/batch_x/*.jpg
+        images/test/batch_x/*.jpg
+        labels/train/batch_x/*.txt
+        labels/val/batch_x/*.txt
+        labels/test/batch_x/*.txt
 """
 
-import argparse
 import json
 import random
-import shutil
 from pathlib import Path
-from typing import Dict, List
+from collections import defaultdict
 
 from tqdm import tqdm
 
-def coco_to_yolo_bbox(bbox, img_w, img_h):
-    """COCO: [x_min, y_min, w, h] -> YOLO: [cx, cy, w, h] (normalized)."""
+def coco_bbox_to_yolo_bbox(bbox, img_w, img_h):
+    """
+    COCO bbox: [x, y, w, h] (左上角 + 宽高, 像素)
+    转为 YOLO: (cx, cy, w, h) (相对坐标, 0~1)
+    """
     x, y, w, h = bbox
-    cx = x + w / 2.0
-    cy = y + h / 2.0
-
-    return [
-        cx / img_w,
-        cy / img_h,
-        w / img_w,
-        h / img_h,
-    ]
-
-def build_image_index(coco):
-    # id -> image info
-    img_idx: Dict[int, Dict] = {}
-    for img in coco["images"]:
-        img_idx[img["id"]] = img
-    return img_idx
-
-def build_ann_index(coco):
-    # image_id -> list of annotations
-    ann_idx: Dict[int, List[Dict]] = {}
-    for ann in coco["annotations"]:
-        if ann.get("iscrowd", 0):
-            continue
-        img_id = ann["image_id"]
-        ann_idx.setdefault(img_id, []).append(ann)
-    return ann_idx
+    cx = (x + w / 2.0) / img_w
+    cy = (y + h / 2.0) / img_h
+    bw = w / img_w
+    bh = h / img_h
+    return cx, cy, bw, bh
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--taco-root",
-        type=str,
-        default="external/TACO",
-        help="TACO 仓库根目录（包含 data/annotations.json）",
-    )
-    parser.add_argument(
-        "--out-root",
-        type=str,
-        default="data/taco_yolo",
-        help="输出 YOLO 数据集根目录",
-    )
-    parser.add_argument(
-        "--split-ratio",
-        type=str,
-        default="0.8,0.1,0.1",
-        help="train,val,test 比例，逗号分隔",
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help="随机种子（用于划分数据集）",
-    )
-    args = parser.parse_args()
+    random.seed(0)
 
-    taco_root = Path(args.taco_root)
-    coco_ann_path = taco_root / "data" / "annotations.json"
-    # 🔑 关键修改：图片根目录就是 data，本身包含 batch_1/... 这些子目录
-    images_root = taco_root / "data"
+    project_root = Path(__file__).resolve().parents[1]
+    taco_root = project_root / "external" / "TACO" / "data"
+    ann_path = taco_root / "annotations.json"
 
-    if not coco_ann_path.exists():
-        raise FileNotFoundError(
-            f"找不到 COCO 标注文件: {coco_ann_path}\n"
-            "请先运行: python scripts/get_taco_dataset.py"
-        )
-    if not images_root.exists():
-        raise FileNotFoundError(
-            f"找不到图片根目录: {images_root}\n"
-            "请先运行: python scripts/get_taco_dataset.py"
-        )
+    if not ann_path.is_file():
+        raise FileNotFoundError(f"找不到 annotations.json: {ann_path}")
 
-    out_root = Path(args.out_root)
-    for split in ["train", "val", "test"]:
-        (out_root / "images" / split).mkdir(parents=True, exist_ok=True)
-        (out_root / "labels" / split).mkdir(parents=True, exist_ok=True)
+    print(f"[TACO] 使用标注文件: {ann_path}")
+    print(f"[TACO] 数据根目录: {taco_root}")
 
-    print(f"[convert_taco_to_yolo] 读取 COCO 标注: {coco_ann_path}")
-    coco = json.loads(coco_ann_path.read_text(encoding="utf-8"))
+    with ann_path.open("r", encoding="utf-8") as f:
+        coco = json.load(f)
 
-    img_idx = build_image_index(coco)
-    ann_idx = build_ann_index(coco)
+    images = coco["images"]
+    annotations = coco["annotations"]
+    categories = coco["categories"]
 
-    img_ids = list(img_idx.keys())
-    random.seed(args.seed)
-    random.shuffle(img_ids)
+    imgid2info = {img["id"]: img for img in images}
+    imgid2annos = defaultdict(list)
+    for a in annotations:
+        imgid2annos[a["image_id"]].append(a)
 
-    r_train, r_val, r_test = [float(x) for x in args.split_ratio.split(",")]
-    assert abs(r_train + r_val + r_test - 1.0) < 1e-6, "split-ratio 之和必须为 1"
+    total_imgs = len(images)
+    imgs_with_ann = sum(1 for img in images if imgid2annos[img["id"]])
+    print(f"[TACO] 总图片数: {total_imgs}")
+    print(f"[TACO] 至少含 1 个标注的图片数: {imgs_with_ann}")
+    print(f"[TACO] 总标注框数: {len(annotations)}")
 
-    n = len(img_ids)
-    n_train = int(n * r_train)
-    n_val = int(n * r_val)
+    # 使用全部 1500 张图片
+    all_img_ids = list(imgid2info.keys())
+    random.shuffle(all_img_ids)
 
-    train_ids = img_ids[:n_train]
-    val_ids = img_ids[n_train : n_train + n_val]
-    test_ids = img_ids[n_train + n_val :]
+    n_total = len(all_img_ids)
+    n_train = int(0.7 * n_total)
+    n_val = int(0.15 * n_total)
+    n_test = n_total - n_train - n_val
 
-    def get_split_name(img_id):
-        if img_id in train_ids:
-            return "train"
-        elif img_id in val_ids:
-            return "val"
-        else:
-            return "test"
+    train_ids = all_img_ids[:n_train]
+    val_ids = all_img_ids[n_train:n_train + n_val]
+    test_ids = all_img_ids[n_train + n_val:]
 
-    print(f"[convert_taco_to_yolo] 总图片数: {n}")
-    print(f"  train: {len(train_ids)}, val: {len(val_ids)}, test: {len(test_ids)}")
+    print(f"[Split] train: {len(train_ids)}, val: {len(val_ids)}, test: {len(test_ids)} (共 {n_total})")
 
-    # 单类别：waste -> class_id = 0
-    class_id = 0
+    # 类别映射
+    catid2name = {c["id"]: c["name"] for c in categories}
+    sorted_cat_ids = sorted(catid2name.keys())
+    catid2yoloid = {cid: i for i, cid in enumerate(sorted_cat_ids)}
+    print(f"[TACO] 类别数: {len(sorted_cat_ids)}")
 
-    num_no_ann = 0
-    for img_id in tqdm(img_ids, desc="Converting TACO to YOLO"):
-        img_info = img_idx[img_id]
-        file_name = img_info["file_name"]  # 例如 "batch_1/00001.jpg"
-        width, height = img_info["width"], img_info["height"]
+    out_root = project_root / "datasets" / "data" / "taco_yolo"
 
-        anns = ann_idx.get(img_id, [])
-        split = get_split_name(img_id)
+    def process_split(split_name, img_ids):
+        print(f"\n[Convert] 处理 {split_name} 集, 图片数: {len(img_ids)}")
+        for img_id in tqdm(img_ids):
+            info = imgid2info[img_id]
+            file_name = info["file_name"]  # e.g. "batch_1/000001.jpg"
+            w, h = info["width"], info["height"]
 
-        # 🔑 关键修改：直接在 images_root 下拼接 file_name
-        src_img_path = images_root / file_name
-        if not src_img_path.exists():
-            tqdm.write(f"WARNING: 图片不存在，跳过: {src_img_path}")
-            continue
+            src_img_path = taco_root / file_name
+            if not src_img_path.is_file():
+                print(f"  ⚠ 找不到图片文件: {src_img_path}, 跳过该图片")
+                continue
 
-        dst_img_path = out_root / "images" / split / src_img_path.name
-        dst_img_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src_img_path, dst_img_path)
+            # 保留 batch_x 子目录结构
+            dst_img_path = out_root / "images" / split_name / file_name
+            dst_img_path.parent.mkdir(parents=True, exist_ok=True)
+            if not dst_img_path.exists():
+                dst_img_path.write_bytes(src_img_path.read_bytes())
 
-        label_name = src_img_path.with_suffix(".txt").name
-        dst_label_path = out_root / "labels" / split / label_name
+            # label 也保留同样的子目录结构，保证一一对应
+            dst_label_path = out_root / "labels" / split_name / file_name
+            dst_label_path = dst_label_path.with_suffix(".txt")
+            dst_label_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if not anns:
-            num_no_ann += 1
-            dst_label_path.touch()
-            continue
+            lines = []
+            for a in imgid2annos.get(img_id, []):
+                cat_id = a["category_id"]
+                if cat_id not in catid2yoloid:
+                    continue
+                cls = catid2yoloid[cat_id]
+                bbox = a["bbox"]
+                cx, cy, bw, bh = coco_bbox_to_yolo_bbox(bbox, w, h)
+                lines.append(f"{cls} {cx:.6f} {cy:.6f} {bw:.6f} {bh:.6f}")
 
-        yolo_lines = []
-        for ann in anns:
-            bbox = ann["bbox"]  # [x, y, w, h] in pixels
-            cx, cy, bw, bh = coco_to_yolo_bbox(bbox, width, height)
-            cx = min(max(cx, 0.0), 1.0)
-            cy = min(max(cy, 0.0), 1.0)
-            bw = min(max(bw, 0.0), 1.0)
-            bh = min(max(bh, 0.0), 1.0)
-            yolo_lines.append(f"{class_id} {cx:.6f} {cy:.6f} {bw:.6f} {bh:.6f}")
+            # 有标注写框，没有标注写空文件
+            dst_label_path.write_text("\n".join(lines), encoding="utf-8")
 
-        dst_label_path.write_text("\n".join(yolo_lines), encoding="utf-8")
+    process_split("train", train_ids)
+    process_split("val", val_ids)
+    process_split("test", test_ids)
 
-    print()
-    print("✅ COCO -> YOLO 转换完成！")
-    print(f"   输出目录: {out_root}")
-    print(f"   其中无标注图片数量（仅空 txt）: {num_no_ann}")
+    print("\n✅ TACO → YOLO 转换完成。输出目录:")
+    print(f"   {out_root.resolve()}")
+    print("   注意：images/* 目录中包含 batch_x 子文件夹，YOLO 会递归读取。")
 
 if __name__ == "__main__":
     main()

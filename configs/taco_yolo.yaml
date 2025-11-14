@@ -2,12 +2,72 @@
 # YOLO data config for TACO -> YOLO conversion
 
 # 数据集根目录（脚本会生成）
-path: ../data/taco_yolo
+path: ../datasets/data/taco_yolo
 
 train: images/train
 val: images/val
 test: images/test
 
-# 单类别：所有垃圾统一为 waste
+# 60 类 TACO（示意：你可以简单用占位名，不影响训练）
 names:
-  0: waste
+  0: cls_0
+  1: cls_1
+  2: cls_2
+  3: cls_3
+  4: cls_4
+  5: cls_5
+  6: cls_6
+  7: cls_7
+  8: cls_8
+  9: cls_9
+  10: cls_10
+  11: cls_11
+  12: cls_12
+  13: cls_13
+  14: cls_14
+  15: cls_15
+  16: cls_16
+  17: cls_17
+  18: cls_18
+  19: cls_19
+  20: cls_20
+  21: cls_21
+  22: cls_22
+  23: cls_23
+  24: cls_24
+  25: cls_25
+  26: cls_26
+  27: cls_27
+  28: cls_28
+  29: cls_29
+  30: cls_30
+  31: cls_31
+  32: cls_32
+  33: cls_33
+  34: cls_34
+  35: cls_35
+  36: cls_36
+  37: cls_37
+  38: cls_38
+  39: cls_39
+  40: cls_40
+  41: cls_41
+  42: cls_42
+  43: cls_43
+  44: cls_44
+  45: cls_45
+  46: cls_46
+  47: cls_47
+  48: cls_48
+  49: cls_49
+  50: cls_50
+  51: cls_51
+  52: cls_52
+  53: cls_53
+  54: cls_54
+  55: cls_55
+  56: cls_56
+  57: cls_57
+  58: cls_58
+  59: cls_59
+

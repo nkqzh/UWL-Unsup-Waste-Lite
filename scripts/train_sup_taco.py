@@ -43,7 +43,7 @@ def main():
     args = parser.parse_args()
 
     project = "runs/uwl_taco_sup"
-    name = "yolo11s"
+    name = "yolo11s-taco"
 
     # 这里直接用官方预训练的 yolo11n.pt
     model = YOLO("yolo11s.pt")
@@ -56,7 +56,7 @@ def main():
         imgsz=640,
         batch=16,
         project="runs/uwl_taco_sup",
-        name="yolo11s",
+        name="yolo11s-taco",
         device=0,
         cache=True,
         seed=0,
